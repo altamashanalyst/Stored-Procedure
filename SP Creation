@@ -1,0 +1,63 @@
+select * from fact_spends
+go
+--stored procedure is a group of sql statement it means when you have face to write same query over and over again then you should save this query as a stored procedure and assign it by its procedure name
+--to creation of any store procedure you use following step;
+--here we create without parameter store procudre for payment_type , spend column 
+create procedure spCategorySales
+AS
+Begin
+select category, spend from fact_spends
+end
+
+exec spCategorySales
+go
+
+--but here our client want to see category with their total sales bcoz we have almos 8.64 lakhs rows 
+--here their demand to delete the previos stored procedure and create this one
+Alter procedure spCategorySales  -- alter function used to change the saved query and add new define sql statement and for permanent deletion we can use DROP Function
+AS
+Begin
+select category,SUM(spend) as Sales   from fact_spends
+group by category
+end
+
+exec spCategorySales -- we get it 
+
+
+go
+
+drop procedure spPaymentModeSales --for permanent deletion
+go
+-- now our client requirement to see category total sales by their payment mode(we have 4 mode of payment) and we use it as a input parameter in stored procedure for dynamically execution 
+create procedure spPaymentModeSales
+@payment_type varchar(20)
+AS
+Begin
+select category,sum(spend) as total_sales from fact_spends
+where payment_type = @payment_type
+group by category
+order by total_sales desc
+End
+
+spPaymentModeSales 'Debit Card'
+exec spPaymentModeSales 'Credit Card'
+execute spPaymentModeSales 'UPI'
+exec spPaymentModeSales 'Net Banking'
+
+go
+-- to see sales by payment mode with particular respective month then we we assign this SP with two input parameter
+create procedure spPaymentMonthSales
+(
+@payment_type varchar(20), --we can also define parameter in () parenthesis
+@month varchar(20)
+)
+AS
+Begin 
+select category,SUM(spend) as Total_Sales from fact_spends
+where payment_type = @payment_type and month = @month
+group by category
+order by Total_Sales desc
+End
+
+exec spPaymentMonthSales  @payment_type='Credit Card' , @month='May'
+exec spPaymentMonthSales  @payment_type='Debit Card' , @month='June'
